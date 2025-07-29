@@ -1,10 +1,11 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Business Day Division Calculator</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
             body {
@@ -47,10 +48,34 @@
                     <input type="number" id="month" name="month" min="1" max="12" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="예: 5" value="5">
                 </div>
 
-                <button id="calculateBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out flex items-center justify-center">
-                    <span id="btnText">계산하기</span>
-                    <div id="loader" class="loader ml-2 hidden"></div>
-                </button>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="division1" class="block text-sm font-medium text-gray-700 mb-1">신규분:</label>
+                        <input type="number" id="division1" name="division1" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="3">
+                    </div>
+                    <div>
+                        <label for="division2" class="block text-sm font-medium text-gray-700 mb-1">타시도:</label>
+                        <input type="number" id="division2" name="division2" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="3">
+                    </div>
+                    <div>
+                        <label for="division3" class="block text-sm font-medium text-gray-700 mb-1">기타분:</label>
+                        <input type="number" id="division3" name="division3" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="1">
+                    </div>
+                    <div>
+                        <label for="division4" class="block text-sm font-medium text-gray-700 mb-1">상품용:</label>
+                        <input type="number" id="division4" name="division4" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="5">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="calculateBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out flex items-center justify-center">
+                        <span id="btnText">계산하기</span>
+                        <div id="loader" class="loader ml-2 hidden"></div>
+                    </button>
+                    <button id="exportPdfBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150 ease-in-out flex items-center justify-center">
+                        PDF로 내보내기
+                    </button>
+                </div>
 
                 <div>
                     <h2 class="text-xl font-semibold text-gray-800 mb-2">결과:</h2>
@@ -65,13 +90,19 @@
         </div>
 
         <script>
-            
+
             const API_KEY = "Mgov99bACh7wUqG5SjIj/9tLMBoOj8frwtmLFyDaMMGfKfDKIKJ3rV2rzjsVLoeZKLMoOpy7ZoLQfo7qKQShfg==";
-            
+
             const HOLIDAY_API_URL = "https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
 
             const yearInput = document.getElementById('year');
             const monthInput = document.getElementById('month');
+
+            const today = new Date();
+            today.setDate(today.getDate() - 4);
+            yearInput.value = today.getFullYear();
+            monthInput.value = today.getMonth() + 1;
+
             const calculateBtn = document.getElementById('calculateBtn');
             const resultPre = document.getElementById('result');
             const errorMessageDiv = document.getElementById('errorMessage');
@@ -90,21 +121,21 @@
                 const solMonthStr = String(month).padStart(2, '0');
                 const solYearStr = String(year);
 
-                
+
                 const params = new URLSearchParams({
-                    serviceKey: apiKey, 
+                    serviceKey: apiKey,
                     _type: "json",
                     solYear: solYearStr,
                     solMonth: solMonthStr,
-                    numOfRows: "100" 
+                    numOfRows: "100"
                 });
 
                 const fullUrl = `${HOLIDAY_API_URL}?${params.toString()}`;
-                
+
                 try {
-                    
+
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); 
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
                     const response = await fetch(fullUrl, { signal: controller.signal });
                     clearTimeout(timeoutId);
@@ -112,37 +143,37 @@
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    
+
                     const data = await response.json();
 
                     if (data.response && data.response.header && data.response.header.resultCode === '00') {
                         const body = data.response.body;
                         if (body && body.items && body.items.item && parseInt(body.totalCount || 0) > 0) {
                             let actualItems = [];
-                            
+
                             if (Array.isArray(body.items.item)) {
                                 actualItems = body.items.item;
                             } else {
                                 actualItems = [body.items.item];
                             }
-                            
+
                             actualItems.forEach(item => {
                                 if (item.isHoliday === 'Y' && item.locdate) {
-                                    holidays.push(String(item.locdate)); 
+                                    holidays.push(String(item.locdate));
                                 }
                             });
                         }
-                        
+
                     } else {
                         const errorMsg = (data.response && data.response.header && data.response.header.resultMsg)
                             ? `API Error: ${data.response.header.resultMsg}`
                             : "API Error: Unknown error from API structure.";
                         console.error(errorMsg);
-                        throw new Error(errorMsg); 
+                        throw new Error(errorMsg);
                     }
                 } catch (e) {
                     console.error(`Request failed: ${e.message}`);
-                    
+
                     if (e.name === 'AbortError') {
                         throw new Error("API request timed out. Please try again.");
                     }
@@ -158,9 +189,9 @@
              * @returns {number} The number of days in the month.
              */
             function getDaysInMonth(year, month) {
-                
-                
-                
+
+
+
                 return new Date(year, month, 0).getDate();
             }
 
@@ -171,13 +202,13 @@
              */
             function formatDateToYYYYMMDD(dateObj) {
                 const year = dateObj.getFullYear();
-                const month = String(dateObj.getMonth() + 1).padStart(2, '0'); 
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 return `${year}${month}${day}`;
             }
 
             /**
-             * Calculates business days for a month, divides them into periods, 
+             * Calculates business days for a month, divides them into periods,
              * and returns formatted strings representing these periods.
              * @param {number} year - The year.
              * @param {number} month - The month (1-12).
@@ -191,13 +222,13 @@
                 }
 
                 const numDaysInMonth = getDaysInMonth(year, month);
-                const businessDaysDates = []; 
+                const businessDaysDates = [];
 
                 for (let dayNum = 1; dayNum <= numDaysInMonth; dayNum++) {
-                    const currentDate = new Date(year, month - 1, dayNum); 
-                    const dayOfWeek = currentDate.getDay(); 
+                    const currentDate = new Date(year, month - 1, dayNum);
+                    const dayOfWeek = currentDate.getDay();
 
-                    
+
                     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
                     const dateStrYYYYMMDD = formatDateToYYYYMMDD(currentDate);
                     const isHoliday = holidaysYYYYMMDD.includes(dateStrYYYYMMDD);
@@ -206,7 +237,7 @@
                         businessDaysDates.push(currentDate);
                     }
                 }
-                
+
                 if (businessDaysDates.length === 0) {
                     return `No business days found for ${year}-${String(month).padStart(2, '0')}.`;
                 }
@@ -218,15 +249,15 @@
                 const totalBusinessDays = businessDaysDates.length;
                 const baseDaysPerDivision = Math.floor(totalBusinessDays / numDivisions);
                 const remainderDays = totalBusinessDays % numDivisions;
-                
+
                 const divisionBdCounts = [];
                 for (let i = 0; i < numDivisions; i++) {
                     divisionBdCounts.push(baseDaysPerDivision + (i < remainderDays ? 1 : 0));
                 }
-                
+
                 const resultPeriods = [];
                 let currentBdIdx = 0;
-                let lastPeriodEndDayNum = 0; 
+                let lastPeriodEndDayNum = 0;
 
                 for (let i = 0; i < numDivisions; i++) {
                     const numBdsInThisPeriod = divisionBdCounts[i];
@@ -238,22 +269,22 @@
                     } else {
                         startDayNumOfPeriod = lastPeriodEndDayNum + 1;
                     }
-                    
+
                     const endBdOfThisPeriod = businessDaysDates[currentBdIdx + numBdsInThisPeriod - 1];
-                    
+
                     let endDayNumOfPeriod;
                     if (i === numDivisions - 1) {
-                        endDayNumOfPeriod = numDaysInMonth; 
+                        endDayNumOfPeriod = numDaysInMonth;
                     } else {
                         endDayNumOfPeriod = endBdOfThisPeriod.getDate();
                     }
-                    
+
                     resultPeriods.push(`${startDayNumOfPeriod}~${endDayNumOfPeriod}`);
-                    
+
                     lastPeriodEndDayNum = endDayNumOfPeriod;
                     currentBdIdx += numBdsInThisPeriod;
                 }
-                
+
                 return resultPeriods;
             }
 
@@ -261,17 +292,18 @@
              * Generates the file summary string for the given year and month.
              * @param {number} year - The year.
              * @param {number} month - The month (1-12).
+             * @param {number[]} divisionCounts - The number of divisions for each category.
              * @returns {Promise<string>} A promise that resolves to the summary string or an error message.
              */
-            async function getFileSummaryMonthJs(year, month) {
+            async function getFileSummaryMonthJs(year, month, divisionCounts) {
                 try {
                     const holidays = await getHolidaysForMonth(year, month, API_KEY);
 
                     const divisions = [
-                        { label: "신규분", count: 3 },
-                        { label: "타시도", count: 2 },
-                        { label: "기타분", count: 1 },
-                        { label: "상품용", count: 5 }
+                        { label: "신규분", count: divisionCounts[0] },
+                        { label: "타시도", count: divisionCounts[1] },
+                        { label: "기타분", count: divisionCounts[2] },
+                        { label: "상품용", count: divisionCounts[3] }
                     ];
 
                     let summary = `${month}월 서류정리용\n`;
@@ -279,31 +311,35 @@
 
                     for (const div of divisions) {
                         const periods = getBusinessDayDivisions(year, month, div.count, holidays);
-                        if (typeof periods === 'string') { 
+                        if (typeof periods === 'string') {
                             summary += `${div.label}: ${periods}\n`;
-                            hasError = true; 
+                            hasError = true;
                         } else {
                             summary += `${div.label}: ${periods.join(',')}\n`;
                         }
                     }
-                    
-                    
-                    
+
+
+
                     return summary.trim();
 
                 } catch (error) {
                     console.error("Error in getFileSummaryMonthJs:", error.message);
-                    
-                    throw error; 
+
+                    throw error;
                 }
             }
 
             calculateBtn.addEventListener('click', async () => {
                 const year = parseInt(yearInput.value);
                 const month = parseInt(monthInput.value);
+                const division1 = parseInt(document.getElementById('division1').value);
+                const division2 = parseInt(document.getElementById('division2').value);
+                const division3 = parseInt(document.getElementById('division3').value);
+                const division4 = parseInt(document.getElementById('division4').value);
 
-                if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-                    errorMessageDiv.textContent = "유효한 연도와 월을 입력해주세요 (월: 1-12).";
+                if (isNaN(year) || isNaN(month) || month < 1 || month > 12 || isNaN(division1) || isNaN(division2) || isNaN(division3) || isNaN(division4)) {
+                    errorMessageDiv.textContent = "유효한 연도, 월, 분할 수를 입력해주세요.";
                     errorMessageDiv.classList.remove('hidden');
                     resultPre.textContent = "";
                     return;
@@ -316,11 +352,11 @@
                 calculateBtn.disabled = true;
 
                 try {
-                    const summary = await getFileSummaryMonthJs(year, month);
+                    const summary = await getFileSummaryMonthJs(year, month, [division1, division2, division3, division4]);
                     resultPre.textContent = summary;
                 } catch (error) {
                     console.error("Calculation failed:", error);
-                    resultPre.textContent = ""; 
+                    resultPre.textContent = "";
                     errorMessageDiv.textContent = `오류 발생: ${error.message}`;
                     errorMessageDiv.classList.remove('hidden');
                 } finally {
@@ -330,13 +366,22 @@
                 }
             });
 
-            
-            [yearInput, monthInput].forEach(input => {
+
+            [yearInput, monthInput, document.getElementById('division1'), document.getElementById('division2'), document.getElementById('division3'), document.getElementById('division4')].forEach(input => {
                 input.addEventListener('keypress', (event) => {
                     if (event.key === 'Enter') {
                         calculateBtn.click();
                     }
                 });
+            });
+
+            document.getElementById('exportPdfBtn').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                const resultText = document.getElementById('result').innerText;
+                doc.text(resultText, 10, 10);
+                doc.save('document-summary.pdf');
             });
 
         </script>
