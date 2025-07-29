@@ -7,6 +7,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap" rel="stylesheet">
         <style>
             body {
                 font-family: 'Inter', sans-serif;
@@ -375,13 +376,25 @@
                 });
             });
 
-            document.getElementById('exportPdfBtn').addEventListener('click', () => {
+            document.getElementById('exportPdfBtn').addEventListener('click', async () => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
 
-                const resultText = document.getElementById('result').innerText;
-                doc.text(resultText, 10, 10);
-                doc.save('document-summary.pdf');
+                const fontUrl = 'https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/NanumGothic.ttf';
+                const fontResponse = await fetch(fontUrl);
+                const fontBlob = await fontResponse.blob();
+                const reader = new FileReader();
+                reader.readAsDataURL(fontBlob);
+                reader.onloadend = function() {
+                    const base64data = reader.result;
+                    doc.addFileToVFS('NanumGothic.ttf', base64data.split(',')[1]);
+                    doc.addFont('NanumGothic.ttf', 'NanumGothic', 'normal');
+                    doc.setFont('NanumGothic');
+
+                    const resultText = document.getElementById('result').innerText;
+                    doc.text(resultText, 10, 10);
+                    doc.save('document-summary.pdf');
+                }
             });
 
         </script>
