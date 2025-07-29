@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Business Day Division Calculator</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
             body {
@@ -54,7 +55,7 @@
                     </div>
                     <div>
                         <label for="division2" class="block text-sm font-medium text-gray-700 mb-1">타시도:</label>
-                        <input type="number" id="division2" name="division2" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="2">
+                        <input type="number" id="division2" name="division2" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="3">
                     </div>
                     <div>
                         <label for="division3" class="block text-sm font-medium text-gray-700 mb-1">기타분:</label>
@@ -66,10 +67,15 @@
                     </div>
                 </div>
 
-                <button id="calculateBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out flex items-center justify-center">
-                    <span id="btnText">계산하기</span>
-                    <div id="loader" class="loader ml-2 hidden"></div>
-                </button>
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="calculateBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out flex items-center justify-center">
+                        <span id="btnText">계산하기</span>
+                        <div id="loader" class="loader ml-2 hidden"></div>
+                    </button>
+                    <button id="exportPdfBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150 ease-in-out flex items-center justify-center">
+                        PDF로 내보내기
+                    </button>
+                </div>
 
                 <div>
                     <h2 class="text-xl font-semibold text-gray-800 mb-2">결과:</h2>
@@ -91,6 +97,12 @@
 
             const yearInput = document.getElementById('year');
             const monthInput = document.getElementById('month');
+
+            const today = new Date();
+            today.setDate(today.getDate() - 4);
+            yearInput.value = today.getFullYear();
+            monthInput.value = today.getMonth() + 1;
+
             const calculateBtn = document.getElementById('calculateBtn');
             const resultPre = document.getElementById('result');
             const errorMessageDiv = document.getElementById('errorMessage');
@@ -361,6 +373,15 @@
                         calculateBtn.click();
                     }
                 });
+            });
+
+            document.getElementById('exportPdfBtn').addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                const resultText = document.getElementById('result').innerText;
+                doc.text(resultText, 10, 10);
+                doc.save('document-summary.pdf');
             });
 
         </script>
